@@ -1,39 +1,119 @@
-export interface Protocol { slug:string; name:string; category:string|null; chains:string[]; tvl_usd:number; change_7d:number|null; mcap_usd:number|null; listed_at:string|null; gecko_id:string|null; symbol:string|null }
-export interface Snapshot { as_of:string; source:string; floor_usd:number; protocols:Protocol[]; watchlist:string[] }
-export interface Row { rank:number; slug:string; name:string; category:string|null; chains:string[]; tvl_usd:number; change_7d:number|null; mcap_usd:number|null; listed_at:string|null; age_days:number|null; watchlist:boolean; implied_value_usd:number; score:number; model:{category_multiple:number;momentum_multiplier:number;maturity_multiplier:number;breadth_multiplier:number}; farm_steps:string[] }
-export class SnapshotError extends Error { constructor(message:string){super(message);this.name='SnapshotError'} }
+export interface Protocol { slug:string;
+  name:string;
+  category:string|null;
+  chains:string[];
+  tvl_usd:number;
+  change_7d:number|null;
+  mcap_usd:number|null;
+  listed_at:string|null;
+  gecko_id:string|null;
+  symbol:string|null }
+export interface Snapshot { as_of:string;
+  source:string;
+  floor_usd:number;
+  protocols:Protocol[];
+  watchlist:string[] }
+export interface Row { rank:number;
+  slug:string;
+  name:string;
+  category:string|null;
+  chains:string[];
+  tvl_usd:number;
+  change_7d:number|null;
+  mcap_usd:number|null;
+  listed_at:string|null;
+  age_days:number|null;
+  watchlist:boolean;
+  implied_value_usd:number;
+  score:number;
+  model:{category_multiple:number;
+    momentum_multiplier:number;
+    maturity_multiplier:number;
+    breadth_multiplier:number};
+  farm_steps:string[] }
+export class SnapshotError extends Error { constructor(message:string){super(message);
+    this.name='SnapshotError'} }
 const finite=(v:unknown):v is number=>typeof v==='number'&&Number.isFinite(v);
 export function parseSnapshot(raw:string|unknown):Snapshot {
- let x:any; try{x=typeof raw==='string'?JSON.parse(raw):raw}catch{throw new SnapshotError('snapshot is not valid JSON')}
- const bad=(s:string):never=>{throw new SnapshotError(`invalid snapshot: ${s}`)};
- if(!x||typeof x!=='object'||Array.isArray(x))bad('expected object');
- if(typeof x.as_of!=='string'||!/^\d{4}-\d\d-\d\d$/.test(x.as_of)||typeof x.source!=='string'||!finite(x.floor_usd)||!Array.isArray(x.protocols)||!Array.isArray(x.watchlist))bad('invalid top-level fields');
- const keys=['slug','name','category','chains','tvl_usd','change_7d','mcap_usd','listed_at','gecko_id','symbol'].sort().join(','); const seen=new Set<string>();
- for(const p of x.protocols){if(!p||typeof p!=='object'||Object.keys(p).sort().join(',')!==keys)bad('protocol fields do not match schema'); if(typeof p.slug!=='string'||!p.slug||seen.has(p.slug)||typeof p.name!=='string'||!(p.category===null||typeof p.category==='string')||!Array.isArray(p.chains)||!p.chains.every((c:any)=>typeof c==='string')||!finite(p.tvl_usd)||!(p.change_7d===null||finite(p.change_7d))||!(p.mcap_usd===null||finite(p.mcap_usd))||!(p.listed_at===null||typeof p.listed_at==='string')||!(p.gecko_id===null||typeof p.gecko_id==='string')||!(p.symbol===null||typeof p.symbol==='string'))bad(`invalid protocol ${String(p.slug)}`); seen.add(p.slug);}
- if(!x.watchlist.every((s:any)=>typeof s==='string'&&seen.has(s)))bad('invalid watchlist');
- return x as Snapshot;
+  let x:any;
+  try{x=typeof raw==='string'?JSON.parse(raw):raw}catch{throw new SnapshotError('snapshot is not valid JSON')}
+  const bad=(s:string):never=>{throw new SnapshotError(`invalid snapshot: ${s}`)};
+  if(!x||typeof x!=='object'||Array.isArray(x))bad('expected object');
+  if(typeof x.as_of!=='string'||!/^\d{4}-\d\d-\d\d$/.test(x.as_of)||typeof x.source!=='string'||!finite(x.floor_usd)||!Array.isArray(x.protocols)||!Array.isArray(x.watchlist))bad('invalid top-level fields');
+  const keys=['slug','name','category','chains','tvl_usd','change_7d','mcap_usd','listed_at','gecko_id','symbol'].sort().join(',');
+  const seen=new Set<string>();
+  for(const p of x.protocols){if(!p||typeof p!=='object'||Object.keys(p).sort().join(',')!==keys)bad('protocol fields do not match schema');
+    if(typeof p.slug!=='string'||!p.slug||seen.has(p.slug)||typeof p.name!=='string'||!(p.category===null||typeof p.category==='string')||!Array.isArray(p.chains)||!p.chains.every((c:any)=>typeof c==='string')||!finite(p.tvl_usd)||!(p.change_7d===null||finite(p.change_7d))||!(p.mcap_usd===null||finite(p.mcap_usd))||!(p.listed_at===null||typeof p.listed_at==='string')||!(p.gecko_id===null||typeof p.gecko_id==='string')||!(p.symbol===null||typeof p.symbol==='string'))bad(`invalid protocol ${String(p.slug)}`);
+    seen.add(p.slug);
+  }
+  if(!x.watchlist.every((s:any)=>typeof s==='string'&&seen.has(s)))bad('invalid watchlist');
+  return x as Snapshot;
 }
-const med=(a:number[])=>{a.sort((x,y)=>x-y);const n=a.length;return n%2?a[(n-1)/2]:(a[n/2-1]+a[n/2])/2};
+const med=(a:number[])=>{a.sort((x,y)=>x-y);
+  const n=a.length;
+  return n%2?a[(n-1)/2]:(a[n/2-1]+a[n/2])/2};
 const pref=['Base','Arbitrum','Solana','Binance','Polygon','Avalanche','Optimism','Ethereum'];
 const exchange=/^(Binance|Coinbase|Bybit|Kraken|Bitget|OKX|Bitfinex|Gemini)\b/i;
 const excludedCategory=new Set(['Bridge','Canonical Bridge','Liquid Staking','Liquid Restaking','Restaked BTC','CEX']);
 const ageAt=(date:string|null,as:string):number|null=>date===null?null:Math.floor((Date.parse(as+'T00:00:00Z')-Date.parse(date+'T00:00:00Z'))/86400000);
-const chooseChain=(p:Protocol)=>{for(const c of pref)if(p.chains.includes(c))return c;return p.chains[0]??'the protocol’s supported chain'};
+const chooseChain=(p:Protocol)=>{for(const c of pref)if(p.chains.includes(c))return c;
+  return p.chains[0]??'the protocol’s supported chain'};
 const cost=(chain:string)=>chain==='Ethereum'?'roughly $8 to $15':'cents to about $1';
-function farm(p:Protocol,age:number|null):string[]{const chain=chooseChain(p),gas=cost(chain),capital=p.tvl_usd>=1e9?250:p.tvl_usd>=1e8?150:p.tvl_usd>=2e7?75:50,cat=(p.category??'').toLowerCase(); let action='make a generic USDC deposit';
- if(/lending|cdp/.test(cat))action='supply capital'; else if(/dex|yield|aggregator/.test(cat))action='provide liquidity'; else if(/curator|allocator|risk curator/.test(cat))action='deposit into a vault'; else if(/derivative|perpetual/.test(cat))action='make a margin deposit and one small hedge'; else if(/rwa/.test(cat))action='mint or hold the asset'; else if(/basis trading/.test(cat))action='deposit and trade a small volume'; else if(/restaking|staking/.test(cat))action='stake'; else if(/payments|chain/.test(cat))action='make a real transfer or payment'; else if(/insurance/.test(cat))action='buy cover';
- const weekly=/lending|cdp/.test(cat)?'make a small deposit or borrow':/dex|yield|aggregator|basis/.test(cat)?'make a small swap':/governance/.test(cat)?'cast a vote':'make a qualifying deposit'; const second=p.chains.length>=3?`Open a smaller $${Math.floor(capital/2)} position on ${p.chains.find(c=>c!==chain)??chain}.`:`Add a smaller top-up on ${chain} and check the protocol’s own points or rewards page for a season or campaign to join.`;
- const days=age!==null&&age<180?60:age!==null&&age<365?45:30;
- return [`Set up a fresh wallet holding only farm funds, keep its seed phrase offline, and fund it on ${chain}. Cost: ${gas} for one transaction. Time: 20 minutes once.`,`On ${chain}, ${action} with $${capital} in farm capital using the protocol’s own interface. Cost: ${gas} for one transaction. Time: 20 minutes once.`,`On ${chain}, ${weekly} once each week to leave a qualifying on-chain record. Cost: ${gas} weekly. Time: 10 minutes a week.`,second+` Cost: ${gas} for one transaction. Time: 15 minutes once.`,`Hold the position for ${days} days so your activity spans more than one snapshot; review it weekly. Cost: $0 while holding. Time: 5 minutes a week.`,`Claim only from the link on the protocol’s own points or rewards page, never pay to claim, then record the wallet, dates and transactions in a farm log. Cost: ${gas} only if a free claim transaction is available. Time: 10 minutes once.`];
+function farm(p:Protocol,age:number|null):string[]{const chain=chooseChain(p),gas=cost(chain),capital=p.tvl_usd>=1e9?250:p.tvl_usd>=1e8?150:p.tvl_usd>=2e7?75:50,cat=(p.category??'').toLowerCase();
+  let action='make a generic USDC deposit';
+  if(/lending|cdp/.test(cat))action='supply capital';
+  else if(/dex|yield|aggregator/.test(cat))action='provide liquidity';
+  else if(/curator|allocator|risk curator/.test(cat))action='deposit into a vault';
+  else if(/derivative|perpetual/.test(cat))action='make a margin deposit and one small hedge';
+  else if(/rwa/.test(cat))action='mint or hold the asset';
+  else if(/basis trading/.test(cat))action='deposit and trade a small volume';
+  else if(/restaking|staking/.test(cat))action='stake';
+  else if(/payments|chain/.test(cat))action='make a real transfer or payment';
+  else if(/insurance/.test(cat))action='buy cover';
+  const weekly=/lending|cdp/.test(cat)?'make a small deposit or borrow':/dex|yield|aggregator|basis/.test(cat)?'make a small swap':/governance/.test(cat)?'cast a vote':'make a qualifying deposit';
+  const secondChain=p.chains.find(c=>c!==chain)??chain;
+  const secondGas=cost(secondChain);
+  const second=p.chains.length>=3?`Open a smaller $${Math.floor(capital/2)} position on ${secondChain}.`:`Add a smaller top-up on ${chain} and check the protocol’s own points or rewards page for a season or campaign to join.`;
+  const days=age!==null&&age<180?60:age!==null&&age<365?45:30;
+  // Steps one through three use the primary chain; step four uses its destination.
+  return [`Set up a fresh wallet holding only farm funds, keep its seed phrase offline, and fund it on ${chain}. Cost: ${gas} for one transaction. Time: 20 minutes once.`,`On ${chain}, ${action} with $${capital} in farm capital using the protocol’s own interface. Cost: ${gas} for one transaction. Time: 20 minutes once.`,`On ${chain}, ${weekly} once each week to leave a qualifying on-chain record. Cost: ${gas} weekly. Time: 10 minutes a week.`,second+` Cost: ${p.chains.length>=3?secondGas:gas} for one transaction. Time: 15 minutes once.`,`Hold the position for ${days} days so your activity spans more than one snapshot; review it weekly. Cost: $0 while holding. Time: 5 minutes a week.`,`Claim only from the link on the protocol’s own points or rewards page, never pay to claim, then record the wallet, dates and transactions in a farm log. Cost: ${gas} only if a free claim transaction is available. Time: 10 minutes once.`];
 }
-export function buildBoard(s:Snapshot):Row[]{const live=s.protocols.filter(p=>p.mcap_usd!==null&&p.tvl_usd>0), globals=live.map(p=>p.mcap_usd!/p.tvl_usd), global=med(globals);const groups=new Map<string,number[]>();for(const p of live){const c=p.category??'';if(!groups.has(c))groups.set(c,[]);groups.get(c)!.push(p.mcap_usd!/p.tvl_usd)}
- const mult=(c:string|null)=>{const a=groups.get(c??'')??[];const m=a.length<2?global:(a.length*med([...a])+4*global)/(a.length+4);return Math.max(.02,Math.min(1.5,m))};
- const watch=new Set(s.watchlist); const chosen=s.protocols.filter(p=>{if(watch.has(p.slug))return true;if(p.gecko_id!==null||p.symbol!==null)return false;if(excludedCategory.has(p.category??'')||/\b(wrapped|staked|staking)\b/i.test(p.name)||exchange.test(p.name)||/\s(?:[Vv]\d+(?:\.\d+)?|\d+\.\d+)$/.test(p.name))return false;return true});
- const items=chosen.map(p=>{const age=ageAt(p.listed_at,s.as_of),m=mult(p.category),mom=1+.45*Math.tanh((p.change_7d??0)/30),mat=.75+.5*Math.min(age??365,1460)/1460,breadth=1+.015*Math.min(Math.max(p.chains.length-1,0),20);const value=Math.max(1,Math.round(p.tvl_usd*m*mom*mat*breadth));const scoreParts={size:0,momentum:(Math.tanh((p.change_7d??0)/30)+1)/2,maturity:Math.min(age??365,1460)/1460,breadth:Math.min(Math.max(p.chains.length-1,0),20)/20,category:Math.max(0,Math.min(1,m/1.5))};return {p,age,m,mom,mat,breadth,value,scoreParts}});
- const min=Math.log10(Math.min(...items.map(i=>i.p.tvl_usd))),max=Math.log10(Math.max(...items.map(i=>i.p.tvl_usd)));
- items.sort((a,b)=>b.value-a.value||(a.p.slug<b.p.slug?-1:a.p.slug>b.p.slug?1:0));
- return items.map((i,n)=>{const size=max===min?1:(Math.log10(i.p.tvl_usd)-min)/(max-min),sc=(.34*size+.24*i.scoreParts.momentum+.18*i.scoreParts.maturity+.12*i.scoreParts.breadth+.12*i.scoreParts.category)*100;return {rank:n+1,slug:i.p.slug,name:i.p.name,category:i.p.category,chains:i.p.chains,tvl_usd:i.p.tvl_usd,change_7d:i.p.change_7d,mcap_usd:i.p.mcap_usd,listed_at:i.p.listed_at,age_days:i.age,watchlist:watch.has(i.p.slug),implied_value_usd:i.value,score:Math.round(sc),model:{category_multiple:+i.m.toFixed(4),momentum_multiplier:+i.mom.toFixed(4),maturity_multiplier:+i.mat.toFixed(4),breadth_multiplier:+i.breadth.toFixed(4)},farm_steps:farm(i.p,i.age)}});
-}
-export function buildLiveRows(s:Snapshot){return s.protocols.filter(p=>p.mcap_usd!==null).sort((a,b)=>b.mcap_usd!-a.mcap_usd!||(a.slug<b.slug?-1:a.slug>b.slug?1:0)).slice(0,24)}
-export function boardIssue(s:Snapshot,rows:Row[]):string|null{const fail=(x:string)=>x;if(rows.length<100||rows.length>4000)return fail(`board row count ${rows.length} is outside 100..4000`);const slugs=new Set(rows.map(r=>r.slug));for(const w of s.watchlist)if(!slugs.has(w))return fail(`watchlist slug missing: ${w}`);for(let i=0;i<rows.length;i++){const r=rows[i];if(r.rank!==i+1)return fail('ranks are not exactly 1..N');if(i&&rows[i-1].implied_value_usd<r.implied_value_usd)return fail('implied values rise as rank ascends');if(!s.protocols.some(p=>p.slug===r.slug))return fail(`unknown protocol slug: ${r.slug}`);if(!Number.isSafeInteger(r.implied_value_usd)||r.implied_value_usd<1||r.implied_value_usd>1e14)return fail(`invalid implied value for ${r.slug}`);if(r.farm_steps.length<3||r.farm_steps.length>12||r.farm_steps.some(x=>typeof x!=='string'||x.trim().length<20||x.trim().length>600))return fail(`invalid farm steps for ${r.slug}`)}if(rows.every(r=>r.implied_value_usd===rows[0].implied_value_usd))return fail('all implied values are identical');return null}
-export function dataScript(s:Snapshot,rows:Row[]){const live=buildLiveRows(s);const cat=new Map<string,{n:number,m:number}>();for(const p of s.protocols.filter(p=>p.mcap_usd!==null&&p.tvl_usd>0)){const k=p.category??'';const v=cat.get(k)??{n:0,m:0};v.n++;cat.set(k,v)}const all=s.protocols.filter(p=>p.mcap_usd!==null&&p.tvl_usd>0).map(p=>p.mcap_usd!/p.tvl_usd).sort((a,b)=>a-b),global=med(all);for(const [k,v] of cat){const vals=s.protocols.filter(p=>(p.category??'')===k&&p.mcap_usd!==null&&p.tvl_usd>0).map(p=>p.mcap_usd!/p.tvl_usd);v.m=vals.length<2?global:(vals.length*med(vals)+4*global)/(vals.length+4);v.m=Math.max(.02,Math.min(1.5,v.m))}const categories=[...cat].map(([category,v])=>({category,live_count:v.n,multiple:+v.m.toFixed(4)})).sort((a,b)=>b.multiple-a.multiple||(a.category<b.category?-1:1));const compact=rows.map(r=>({rank:r.rank,slug:r.slug,name:r.name,category:r.category,chains:r.chains,tvl_usd:r.tvl_usd,change_7d:r.change_7d,age_days:r.age_days,watchlist:r.watchlist,implied_value_usd:r.implied_value_usd,score:r.score,...r.model,farm_steps:r.farm_steps}));const dataset={as_of:s.as_of,source:s.source,floor_usd:s.floor_usd,model_version:'token-radar-original-1',model_constants:{global_multiple:global,shrinkage_weight:4,momentum_weight:.45,momentum_divisor:30,maturity_floor:.75,maturity_range:.5,maturity_days:1460,breadth_step:.015},category_multiples:categories,watchlist_size:s.watchlist.length,board_size:rows.length,early_size:rows.filter(r=>!r.watchlist).length,live_size:live.length,rows:compact,live_rows:live};return `window.RADAR = ${JSON.stringify(dataset)};\n`}
+export function buildBoard(s:Snapshot):Row[]{const live=s.protocols.filter(p=>p.mcap_usd!==null&&p.tvl_usd>0), globals=live.map(p=>p.mcap_usd!/p.tvl_usd), global=med(globals);
+  const groups=new Map<string,number[]>();
+  for(const p of live){const c=p.category??'';
+    if(!groups.has(c))groups.set(c,[]);
+    groups.get(c)!.push(p.mcap_usd!/p.tvl_usd)}
+    const mult=(c:string|null)=>{const a=groups.get(c??'')??[];
+      const m=a.length<2?global:(a.length*med([...a])+4*global)/(a.length+4);
+      return Math.max(.02,Math.min(1.5,m))};
+    const watch=new Set(s.watchlist);
+    const chosen=s.protocols.filter(p=>{if(watch.has(p.slug))return true;if(p.gecko_id!==null||p.symbol!==null)return false;if(excludedCategory.has(p.category??'')||/\b(wrapped|staked|staking)\b/i.test(p.name)||exchange.test(p.name)||/\s(?:[Vv]\d+(?:\.\d+)?|\d+\.\d+)$/.test(p.name))return false;return true});
+    const items=chosen.map(p=>{const age=ageAt(p.listed_at,s.as_of),m=mult(p.category),mom=1+.45*Math.tanh((p.change_7d??0)/30),mat=.75+.5*Math.min(age??365,1460)/1460,breadth=1+.015*Math.min(Math.max(p.chains.length-1,0),20);const value=Math.max(1,Math.round(p.tvl_usd*m*mom*mat*breadth));const scoreParts={size:0,momentum:(Math.tanh((p.change_7d??0)/30)+1)/2,maturity:Math.min(age??365,1460)/1460,breadth:Math.min(Math.max(p.chains.length-1,0),20)/20,category:Math.max(0,Math.min(1,m/1.5))};return {p,age,m,mom,mat,breadth,value,scoreParts}});
+    const min=Math.log10(Math.min(...items.map(i=>i.p.tvl_usd))),max=Math.log10(Math.max(...items.map(i=>i.p.tvl_usd)));
+    items.sort((a,b)=>b.value-a.value||(a.p.slug<b.p.slug?-1:a.p.slug>b.p.slug?1:0));
+    return items.map((i,n)=>{const size=max===min?1:(Math.log10(i.p.tvl_usd)-min)/(max-min),sc=(.34*size+.24*i.scoreParts.momentum+.18*i.scoreParts.maturity+.12*i.scoreParts.breadth+.12*i.scoreParts.category)*100;return {rank:n+1,slug:i.p.slug,name:i.p.name,category:i.p.category,chains:i.p.chains,tvl_usd:i.p.tvl_usd,change_7d:i.p.change_7d,mcap_usd:i.p.mcap_usd,listed_at:i.p.listed_at,age_days:i.age,watchlist:watch.has(i.p.slug),implied_value_usd:i.value,score:Math.round(sc),model:{category_multiple:+i.m.toFixed(4),momentum_multiplier:+i.mom.toFixed(4),maturity_multiplier:+i.mat.toFixed(4),breadth_multiplier:+i.breadth.toFixed(4)},farm_steps:farm(i.p,i.age)}});
+  }
+  export function buildLiveRows(s:Snapshot){return s.protocols.filter(p=>p.mcap_usd!==null).sort((a,b)=>b.mcap_usd!-a.mcap_usd!||(a.slug<b.slug?-1:a.slug>b.slug?1:0)).slice(0,24)}
+  export function boardIssue(s:Snapshot,rows:Row[]):string|null{const fail=(x:string)=>x;
+    if(rows.length<100||rows.length>4000)return fail(`board row count ${rows.length} is outside 100..4000`);
+    const slugs=new Set(rows.map(r=>r.slug));
+    for(const w of s.watchlist)if(!slugs.has(w))return fail(`watchlist slug missing: ${w}`);
+    for(let i=0;i<rows.length;i++){const r=rows[i];
+      if(r.rank!==i+1)return fail('ranks are not exactly 1..N');
+      if(i&&rows[i-1].implied_value_usd<r.implied_value_usd)return fail('implied values rise as rank ascends');
+      if(!s.protocols.some(p=>p.slug===r.slug))return fail(`unknown protocol slug: ${r.slug}`);
+      if(!Number.isSafeInteger(r.implied_value_usd)||r.implied_value_usd<1||r.implied_value_usd>1e14)return fail(`invalid implied value for ${r.slug}`);
+      if(r.farm_steps.length<3||r.farm_steps.length>12||r.farm_steps.some(x=>typeof x!=='string'||x.trim().length<20||x.trim().length>600))return fail(`invalid farm steps for ${r.slug}`)}if(rows.every(r=>r.implied_value_usd===rows[0].implied_value_usd))return fail('all implied values are identical');
+    return null}
+  export function dataScript(s:Snapshot,rows:Row[]){const live=buildLiveRows(s);
+    const cat=new Map<string,{n:number,m:number}>();
+    for(const p of s.protocols.filter(p=>p.mcap_usd!==null&&p.tvl_usd>0)){const k=p.category??'';
+      const v=cat.get(k)??{n:0,m:0};
+      v.n++;
+      cat.set(k,v)}const all=s.protocols.filter(p=>p.mcap_usd!==null&&p.tvl_usd>0).map(p=>p.mcap_usd!/p.tvl_usd).sort((a,b)=>a-b),global=med(all);
+    for(const [k,v] of cat){const vals=s.protocols.filter(p=>(p.category??'')===k&&p.mcap_usd!==null&&p.tvl_usd>0).map(p=>p.mcap_usd!/p.tvl_usd);
+      v.m=vals.length<2?global:(vals.length*med(vals)+4*global)/(vals.length+4);
+      v.m=Math.max(.02,Math.min(1.5,v.m))}const categories=[...cat].map(([category,v])=>({category,live_count:v.n,multiple:+v.m.toFixed(4)})).sort((a,b)=>b.multiple-a.multiple||(a.category<b.category?-1:1));
+    const compact=rows.map(r=>({rank:r.rank,slug:r.slug,name:r.name,category:r.category,chains:r.chains,tvl_usd:r.tvl_usd,change_7d:r.change_7d,age_days:r.age_days,watchlist:r.watchlist,implied_value_usd:r.implied_value_usd,score:r.score,...r.model,farm_steps:r.farm_steps}));
+    const dataset={as_of:s.as_of,source:s.source,floor_usd:s.floor_usd,model_version:'token-radar-original-1',model_constants:{global_multiple:global,shrinkage_weight:4,momentum_weight:.45,momentum_divisor:30,maturity_floor:.75,maturity_range:.5,maturity_days:1460,breadth_step:.015},category_multiples:categories,watchlist_size:s.watchlist.length,board_size:rows.length,early_size:rows.filter(r=>!r.watchlist).length,live_size:live.length,rows:compact,live_rows:live};
+    return `window.RADAR = ${JSON.stringify(dataset)};\n`}
