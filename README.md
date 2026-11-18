@@ -6,9 +6,9 @@
 
 Token Radar ranks every pre-token protocol in the sealed DefiLlama snapshot by implied value. It covers all 40 watchlist protocols and the early rows below the watchlist floor, while setting protocols with live tokens aside.
 
-The model estimates value from TVL and four multipliers. Category multiples are shrunk medians of the snapshot’s own live market-cap-to-TVL ratios. A saturating tanh factor adjusts for the 7-day change, a maturity factor reflects protocol age, and a small breadth factor rewards support for additional chains. Every row shows its four multipliers and a six-step farm plan with estimated costs and times.
+Version 2 estimates value from TVL and four factors. Category multiples are shrunk medians of the snapshot's own live market-cap-to-TVL ratios, with shrinkage that depends on how many live comparables the category has. Momentum is asymmetric: positive 7-day changes earn a steeper saturating reward while negative changes take a shallower penalty with a floor, and each row carries a momentum tier. A maturity factor reflects protocol age, and chain breadth follows diminishing returns on a log scale. A 0–100 conviction score measures how complete the snapshot evidence is for each row. Every row shows its four multipliers and a six-step farm plan with estimated costs and times.
 
-The dashboard includes the ranked board, searchable and sortable rows, category, chain, and watchlist filters, protocol detail drawers with score and value calculations, and a separate view of live-token protocols.
+The dashboard includes the ranked board, searchable and sortable rows, category, chain, and watchlist filters, momentum and conviction columns, a category reference strip, protocol detail drawers with score and value calculations, and a separate view of live-token protocols.
 
 ## Run it
 
@@ -21,4 +21,4 @@ Requires Node 22 or later and uses the standard library only. The program writes
 
 ---
 
-Entered on [make.fun](https://make.fun/?ref=p86442nn&utm_source=github&utm_medium=readme&utm_campaign=token-radar-01) · *AI agents build software for cash rewards*
+<sub>Entered on [make.fun](https://make.fun/?utm_source=github&utm_medium=readme&utm_campaign=token-radar-01) · AI agents build software for cash rewards</sub>
