@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Token Launch Radar</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div class="brand"><span class="signal" aria-hidden="true"></span><div><p class="eyebrow">Independent protocol research</p><h1>Token Launch <span>Radar</span></h1></div></div>
+      <div class="snapshot"><span id="model-version"></span><b id="as-of"></b></div>
+      <p class="disclaimer">DefiLlama snapshot data. Implied value is this model’s estimate, not a market price.</p>
+    </header>
+    <section class="stats" aria-label="Snapshot summary">
+      <article><span>Watchlist covered</span><strong id="stat-watch"></strong></article>
+      <article><span>Board rows</span><strong id="stat-board"></strong></article>
+      <article><span>Below watchlist floor</span><strong id="stat-early"></strong></article>
+      <article><span>Live tokens set aside</span><strong id="stat-live"></strong></article>
+      <article class="wide"><span>Board total TVL</span><strong id="stat-tvl" class="money"></strong></article>
+    </section>
+    <section class="model-panel panel">
+      <div class="model-copy"><p class="eyebrow">Method / <span id="model-tag"></span></p><h2>How the model works</h2>
+        <p>Implied value = TVL × category multiple × momentum × maturity × chain breadth. The category multiple is the shrunk median market-cap-to-TVL ratio of live protocols in that category; momentum saturates with the 7-day change; maturity grows with age; breadth adds a small factor for each additional chain.</p>
+        <p class="formula" id="formula"></p>
+      </div>
+      <div class="multiples"><div class="table-caption"><span>Category multiples</span><small>live count · multiple</small></div><div class="multiple-list" id="multiples"></div></div>
+    </section>
+    <nav class="tabs" aria-label="Dataset view"><button data-tab="board" class="tab active">Pre-token board <span id="tab-board-count"></span></button><button data-tab="live" class="tab">Live-token protocols <span id="tab-live-count"></span></button></nav>
+    <section class="controls panel" aria-label="Filter protocols">
+      <label class="search">Search<input id="search" type="search" placeholder="Name, slug, category or chain" autocomplete="off"></label>
+      <label>Category<select id="category"><option value="">All categories</option></select></label>
+      <label>Chain<select id="chain"><option value="">All chains</option></select></label>
+      <label class="check"><input id="watchlist" type="checkbox"><span>Watchlist only</span></label>
+    </section>
+    <section id="board-view" class="data-view">
+      <div class="result-line"><span id="result-count"></span><span>Click a row to inspect its model</span></div>
+      <div class="table-wrap panel"><table><thead><tr>
+        <th><button data-sort="rank">Rank <i></i></button></th><th><button data-sort="name">Protocol <i></i></button></th><th class="numeric"><button data-sort="tvl_usd">TVL <i></i></button></th><th class="numeric"><button data-sort="change_7d">7d change <i></i></button></th><th class="numeric"><button data-sort="age_days">Age <i></i></button></th><th class="numeric"><button data-sort="chains">Chains <i></i></button></th><th class="numeric"><button data-sort="score">Score <i></i></button></th><th class="numeric"><button data-sort="implied_value_usd">Implied value <i></i></button></th>
+      </tr></thead><tbody id="board-rows"></tbody></table></div>
+    </section>
+    <section id="live-view" class="data-view hidden">
+      <div class="live-banner"><span class="live-dot"></span><div><h2>Already trading · outside the ranking</h2><p>These protocols have token market caps in the snapshot. They are shown for context and are not ranked by this model.</p></div></div>
+      <div class="result-line"><span id="live-count"></span><span>Sorted by market cap</span></div>
+      <div class="table-wrap panel"><table><thead><tr><th>Protocol</th><th>Category</th><th>Chains</th><th class="numeric">TVL</th><th class="numeric">Market cap</th></tr></thead><tbody id="live-rows"></tbody></table></div>
+    </section>
+    <aside id="detail" class="detail panel hidden" aria-live="polite"></aside>
+    <footer>The watchlist is DefiLlama’s record: a protocol records no token, which is not proof it has none. Implied values are estimates.</footer>
+  </main>
+  <script src="../data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
